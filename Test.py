@@ -163,6 +163,16 @@ class Test(unittest.TestCase):
         template = Template.Template("{{#item}}This is {{.}}{{/item}}")
         result = template.RenderSimple()
         self.assertEqual("", result)
+        
+    def testExpandNestedRepeatedBlock (self):
+        template = Template.Template ("{{#block}}{{#block}}{{item}}{{/block}}{{/block}}")
+        result = template.RenderSimple (block = [{'item':0},{'item':1}])        
+        self.assertEqual("0101", result)
+        
+    def testExpandNestedRepeatedBlockTwoLevelsDeep (self):
+        template = Template.Template ("{{#block}}{{#block}}{{#block}}{{item}}{{/block}}{{/block}}{{/block}}")
+        result = template.RenderSimple (block = [{'item':0},{'item':1}])        
+        self.assertEqual("01010101", result)
 
 if __name__ == "__main__":
     unittest.main()

@@ -367,12 +367,17 @@ class Template:
         assert len (itemStack) > 0
         assert itemStack [-1] != None
         
-        if not blockName in itemStack [-1]:
+        # Must be present somewhere along the stack
+        # Search up in case we have the same block nested
+        thisItems = None
+        for items in itemStack:
+            if blockName in items:
+                thisItems = items [blockName]
+                break
+        else:
             return
         
         blockContent = inputStream.Substring(start.GetEnd (), end.GetStart ())
-
-        thisItems = itemStack [-1] [blockName]
 
         instanceCount = 0
         # deal with various dictionary types
@@ -463,6 +468,7 @@ class Template:
                     raise InvalidToken("Token '{}' incorrectly delimited".format (token))
                      
     def __FindBlockEnd (self, inputStream, blockname):
+        nestedStack = []
         while not inputStream.IsAtEnd ():
             current = inputStream.Get()
             
@@ -470,8 +476,17 @@ class Template:
                 inputStream.Unget()
                 token = self.__ReadToken (inputStream)
                 
-                if (token.IsBlockClose () and token.GetName () == blockname):
-                    return token
+                if (token.IsBlockStart ()):
+                    nestedStack.append (token.GetName ())
+                
+                if (token.IsBlockClose ()):
+                    if len(nestedStack) > 0:
+                        if token.GetName () != nestedStack.pop ():
+                            assert False, "Invalid block nesting for block '{}'".format (token.GetName ())
+                    elif token.GetName () == blockname:
+                        return token
+                    else:
+                        break
         assert False, "Could not find block end for '{}'".format (blockname)
         return None
     
