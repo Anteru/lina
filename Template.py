@@ -291,7 +291,7 @@ class Token:
         return self.prefix == '>'
     
     def IsSelfReference (self):
-        return self.name == '.'
+        return self.name[0] == '.'
     
     def EvaluateWhiteSpaceToken (self):
         if (self.name == 'NEWLINE'):
@@ -325,10 +325,15 @@ class Template:
         # a.b notation. We search for 'a', and then
         # we access using the rest of the path
         compound = None
-        if '.' in name:
+        # If name starts with ., we have to separate it out
+        if token.IsSelfReference ():
+            if (len (name)) > 1:
+                compound = name.split('.')
+            name = '.'
+        elif '.' in name:
             compound = name.split ('.')
             name = compound[0]
-            
+
         for i in reversed(itemStack):
             assert i != None
             if name in i:
@@ -356,6 +361,10 @@ class Template:
         
     def __ExpandBlock(self, inputStream, outputStream,
                       start, end, itemStack):
+        def IsPrimitiveType(e):
+            return isinstance(e, str) or isinstance (e, int) or \
+                isinstance (e, float) or isinstance (e, bool)
+        
         self.log.debug("Expanding block '{}'".format(start.GetName()))
         assert start.GetName () == end.GetName ()
         assert start.IsBlockStart ()
@@ -369,10 +378,10 @@ class Template:
         
         # Must be present somewhere along the stack
         # Search up in case we have the same block nested
-        thisItems = None
+        blockItems = None
         for items in itemStack:
             if blockName in items:
-                thisItems = items [blockName]
+                blockItems = items [blockName]
                 break
         else:
             return
@@ -381,55 +390,60 @@ class Template:
 
         instanceCount = 0
         # deal with various dictionary types
+        # Blocks are expanded by iterating over all entries. Wrap dictionaries,
+        # empty items and primitive types into lists so we can iterate over them
         # name=dict => name = [dict]
         # name=None => name = [{}]
         # otherwise, just copy
-        if (thisItems == None):
+        if (blockItems == None):
             instanceCount = 1
-            thisItems = [{}]
-        elif isinstance(thisItems, dict):
-            thisItems = [thisItems]
+            blockItems = [{}]
+        elif isinstance(blockItems, dict):
+            blockItems = [blockItems]
             instanceCount = 1
-        elif isinstance(thisItems, str) or isinstance(thisItems, int) or isinstance(thisItems, float) or isinstance(thisItems, bool):
-            # We allow a single string to enable the block-as-item syntax
-            # Wrap it again so the string is not iterated below
+        elif IsPrimitiveType (blockItems):
+            # Plain objects are wrapped to support self-references
             instanceCount = 1
-            thisItems = [thisItems]
+            blockItems = [blockItems]
         else:
-            instanceCount = len (thisItems)
+            instanceCount = len (blockItems)
             
         for i in range(instanceCount):
-            # Check if we got a plain list or a dictionary
-            # need to check if the first child is a dict or
-            # just an object, in the latter case, we assume
-            # that the user is going to index using {{.}}
-            newItems = thisItems [i]
+            # Current entry
+            current = dict ()
+               
+            # Add a self-reference
+            # For simple types, wrap it into a dictionary, otherwise, just add
+            # a self-reference to the already existing dictionary
+            if not isinstance(blockItems [i], dict):
+                current = {'.' : blockItems [i]}
+            else:
+                current = blockItems [i]
+                current ['.'] = blockItems [i]
+
             isFirst = (i == 0)
             isLast = ((i+1) == instanceCount)
-               
-            if isinstance(newItems, dict):
-                if (i == 0):
-                    newItems [blockName + "#First"] = None
-                if ((i+1) < instanceCount):
-                    newItems [blockName + "#Separator"] = None
-                if ((i+1) == instanceCount):
-                    newItems [blockName + "#Last"] = None
-            else:
-                newItems = thisItems
-                        
+
+            if (i == 0):
+                current [blockName + "#First"] = None
+            if ((i+1) < instanceCount):
+                current [blockName + "#Separator"] = None
+            if ((i+1) == instanceCount):
+                current [blockName + "#Last"] = None
+                                                
             hasBlockFormatter = False
             for formatter in start.GetFormatters():
                 if formatter.IsBlockFormatter():
                     hasBlockFormatter = True
                     formatter.OnBlockBegin (outputStream, isFirst)
                         
-            itemStack.append (newItems)  
+            itemStack.append (current)
             # Write the string to a temporary stream if a block
             # formatter is present
             if hasBlockFormatter:
                 tmpStream = io.StringIO()  
                         
-                self.__Render(TextStream (blockContent), tmpStream, itemStack, itemNumber=i)
+                self.__Render(TextStream (blockContent), tmpStream, itemStack)
                 
                 tmpString = tmpStream.getvalue()
             
@@ -439,7 +453,7 @@ class Template:
                 outputStream.write (tmpString)
             # Directly render into output stream for maximum performance
             else:
-                self.__Render(TextStream (blockContent), outputStream, itemStack, itemNumber=i)
+                self.__Render(TextStream (blockContent), outputStream, itemStack)
                 
             itemStack.pop ()
             
@@ -496,7 +510,7 @@ class Template:
         template = self.resolver.Get (token.GetName ())
         template.__RenderTo (outputStream, itemStack)
     
-    def __Render(self, inputStream, outputStream, itemStack, itemNumber=None):
+    def __Render(self, inputStream, outputStream, itemStack):
         while not inputStream.IsAtEnd ():
             current = inputStream.Get()
             
@@ -504,7 +518,7 @@ class Template:
                 inputStream.Unget()
                 token = self.__ReadToken (inputStream)
                 
-                if (token.IsValue()):
+                if (token.IsValue() or token.IsSelfReference ()):
                     self.__ExpandVariable(outputStream, token, itemStack)
                 elif (token.IsBlockStart ()):
                     blockEnd = self.__FindBlockEnd(inputStream, token.GetName ())                    
@@ -514,20 +528,6 @@ class Template:
                     outputStream.write (token.EvaluateWhiteSpaceToken())
                 elif (token.IsIncludeToken ()):
                     self.__ExpandInclude (outputStream, token, itemStack)
-                elif (token.IsSelfReference ()):
-                    assert itemNumber is not None, "Self-reference is only allowed inside a block"
-                    value = itemStack[-1][itemNumber]
-                    
-                    for formatter in token.GetFormatters():
-                        if formatter.IsValueFormatter():
-                            value = formatter.Format (value)
-                    
-                    if not isinstance(value, str):
-                        value = str(value)
-                    
-                    outputStream.write (value)
-                else:
-                    raise InvalidToken (token.name)
             else:
                 # pass through to output
                 outputStream.write(current)

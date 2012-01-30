@@ -174,5 +174,10 @@ class Test(unittest.TestCase):
         result = template.RenderSimple (block = [{'item':0},{'item':1}])        
         self.assertEqual("01010101", result)
 
+    def testExpandSingleItemCompound (self):
+        template = Template.Template("{{#item}}This is {{.field}}{{/item}}")
+        result = template.RenderSimple(item={'field':'value'})
+        self.assertEqual("This is value", result)
+
 if __name__ == "__main__":
     unittest.main()
