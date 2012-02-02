@@ -193,7 +193,17 @@ class WrapStringFormatter(Formatter):
         if isinstance (text, str):
             return '"{}"'.format (text)
         else:
-            return str(text)
+            return text
+
+class CBooleanFormatter(Formatter):
+    def __init__(self):
+        Formatter.__init__(self, 'value')
+
+    def Format(self, value):
+        if isinstance (value, bool):
+            return 'true' if value else 'false'
+        else:
+            return value
     
 def GetFormatter (name, value = None):
     if name == 'width' or name == 'w':
@@ -212,6 +222,8 @@ def GetFormatter (name, value = None):
         return DefaultFormatter (value)
     elif name == 'wrap-string':
         return WrapStringFormatter ()
+    elif name == 'cbool':
+        return CBooleanFormatter ()
     else:
         return None
 
