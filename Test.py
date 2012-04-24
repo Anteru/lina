@@ -179,5 +179,10 @@ class Test(unittest.TestCase):
         result = template.RenderSimple(item={'field':'value'})
         self.assertEqual("This is value", result)
 
+    def testFormatAsHex (self):
+        template = Template.Template("{{item:hex}}")
+        result = template.RenderSimple(item=127)
+        self.assertEqual("0x7F", result)
+
 if __name__ == "__main__":
     unittest.main()

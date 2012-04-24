@@ -184,6 +184,13 @@ class UppercaseFormatter(Formatter):
         
     def Format(self, text):
         return str (text).upper ()
+        
+class EscapeNewlineFormatter(Formatter):
+    def __init__(self):
+        Formatter.__init__(self, 'value')
+        
+    def Format(self, text):
+        return str (text).replace ('\n', '\\n')
     
 class WrapStringFormatter(Formatter):
     def __init__(self):
@@ -204,6 +211,16 @@ class CBooleanFormatter(Formatter):
             return 'true' if value else 'false'
         else:
             return value
+
+class HexFormatter(Formatter):
+    def __init__(self):
+        Formatter.__init__(self, 'value')
+
+    def Format(self, value):
+        # Format as 0xUPPERCASE
+        result = hex(value)
+        result = '0x' + result [2:].upper ()
+        return result
     
 def GetFormatter (name, value = None):
     if name == 'width' or name == 'w':
@@ -224,6 +241,10 @@ def GetFormatter (name, value = None):
         return WrapStringFormatter ()
     elif name == 'cbool':
         return CBooleanFormatter ()
+    elif name == 'escape-newlines':
+        return EscapeNewlineFormatter ()
+    elif name == 'hex':
+        return HexFormatter ()
     else:
         return None
 
