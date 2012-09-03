@@ -6,14 +6,24 @@ import unittest, Template
 
 class Test(unittest.TestCase):
     def testReplaceVariable(self):
-        template = Template.Template ('''This is a {{test}}''')
+        template = Template.Template ('''{{test}}''')
         result = template.RenderSimple(test='value')
-        self.assertEqual(result, "This is a value")
+        self.assertEqual(result, "value")
         
-    def testReplaceBlock(self):
-        template = Template.Template('''This is a {{#block}}{{test}}{{/block}}''')
+    def testExpandDictionary(self):
+        template = Template.Template('''{{#block}}{{test}}{{/block}}''')
         result=template.RenderSimple(block={'test':'value'})
-        self.assertEqual("This is a value", result)
+        self.assertEqual("value", result)
+        
+    def testExpandList(self):
+        template = Template.Template("{{#block}}{{.}}{{/block}}")
+        result=template.RenderSimple(block=[1,2,3])
+        self.assertEqual("123", result)
+
+    def testExpandSet(self):
+        template = Template.Template("{{#block}}{{.}}{{/block}}")
+        result = template.RenderSimple(block = {1, 2, 3})
+        self.assertEqual("123", result)
         
     def testGlobalVariableGetsFound(self):
         template = Template.Template ("{{#B}}{{test}}{{/B}}")
@@ -80,12 +90,12 @@ class Test(unittest.TestCase):
         result=template.RenderSimple(item='bla')
         self.assertEqual("bla", result)
         
-    def testExpandListSeparator(self):
+    def testSeparator(self):
         template = Template.Template("{{#block:list-separator=, }}{{item}}{{/block}}")
         result=template.RenderSimple(block=[{'item' : '0'}, {'item' : '1'}])
         self.assertEqual("0, 1", result)
         
-    def testExpandListSeparatorSingleItem(self):
+    def testSeparatorIsNotAddedOnSingleItem(self):
         template = Template.Template("{{#block:list-separator=, }}{{item}}{{/block}}")
         result=template.RenderSimple(block=[{'item' : '0'}])
         self.assertEqual("0", result)
@@ -148,11 +158,6 @@ class Test(unittest.TestCase):
         template = Template.Template("{{item:upper-case}}")
         result=template.RenderSimple(item='baD')
         self.assertEqual("BAD", result)
-        
-    def testExpandPlainList(self):
-        template = Template.Template("{{#block}}{{.}}{{/block}}")
-        result=template.RenderSimple(block=[1,2,3])
-        self.assertEqual("123", result)
         
     def testExpandSingleItemAsBlock(self):
         template = Template.Template("{{#item}}This is {{.}}{{/item}}")

@@ -98,6 +98,7 @@ class Formatter:
     blocks/values during expansion.'''
     def __init__(self, formatterType):
         assert formatterType != None, 'Type must be set for Formatter'
+        assert formatterType == 'block' or formatterType == 'value'
         self.type = formatterType
         
     def IsValueFormatter(self):
@@ -112,13 +113,16 @@ class Formatter:
     
     def OnBlockBegin(self, outputStream, isFirst):
         '''Called before a block is expanded.'''
+        assert self.type == 'block'
         pass
         
     def OnBlockEnd(self, outputStream, isLast):
         '''Called after a block has been expanded.'''
+        assert self.type == 'block'
         pass
     
 class IndentFormatter(Formatter):
+    '''Indent a block using tabs.'''
     def __init__(self, depth):
         Formatter.__init__(self, 'block')
         self.depth = depth
@@ -131,6 +135,7 @@ class IndentFormatter(Formatter):
         return block.replace ('\n', '\n' + self.tabs)
     
 class ListSeparatorFormatter(Formatter):
+    '''Separate block entries.'''
     def __init__(self, value):
         Formatter.__init__(self, 'block')
         value = value.replace ('NEWLINE', '\n')
@@ -152,6 +157,7 @@ class WidthFormatter(Formatter):
         return str.format ("{0:" + self.width + "}", str(text))
     
 class PrefixFormatter(Formatter):
+    '''Add a prefix to a value.'''
     def __init__(self, prefix):
         Formatter.__init__(self, 'value')
         self.prefix = prefix
@@ -160,6 +166,7 @@ class PrefixFormatter(Formatter):
         return self.prefix + str (text)
     
 class SuffixFormatter(Formatter):
+    '''Add a suffix to a value.'''
     def __init__(self, suffix):
         Formatter.__init__(self, 'value')
         self.suffix = suffix
@@ -168,6 +175,7 @@ class SuffixFormatter(Formatter):
         return str (text) + self.suffix
     
 class DefaultFormatter(Formatter):
+    '''Emit the default if the value is None, otherwise the value itself.'''
     def __init__(self, value):
         Formatter.__init__(self, 'value')
         self.value = value
@@ -179,6 +187,7 @@ class DefaultFormatter(Formatter):
             return text
         
 class UppercaseFormatter(Formatter):
+    '''Format a value as uppercase.'''
     def __init__(self):
         Formatter.__init__(self, 'value')
         
@@ -186,6 +195,7 @@ class UppercaseFormatter(Formatter):
         return str (text).upper ()
         
 class EscapeNewlineFormatter(Formatter):
+    '''Escape embedded newlines.'''
     def __init__(self):
         Formatter.__init__(self, 'value')
         
@@ -193,6 +203,7 @@ class EscapeNewlineFormatter(Formatter):
         return str (text).replace ('\n', '\\n')
     
 class WrapStringFormatter(Formatter):
+    '''Wrap strings with quotation marks.'''
     def __init__(self):
         Formatter.__init__(self, 'value')
         
@@ -203,6 +214,8 @@ class WrapStringFormatter(Formatter):
             return text
 
 class CBooleanFormatter(Formatter):
+    '''For booleans, write true or false to the output. Otherwise,
+    the input is just passed through.'''
     def __init__(self):
         Formatter.__init__(self, 'value')
 
@@ -213,6 +226,7 @@ class CBooleanFormatter(Formatter):
             return value
 
 class HexFormatter(Formatter):
+    '''Write an integer as a hex literal (0x133F).'''
     def __init__(self):
         Formatter.__init__(self, 'value')
 
@@ -434,6 +448,10 @@ class Template:
         elif isinstance(blockItems, dict):
             blockItems = [blockItems]
             instanceCount = 1
+        elif isinstance (blockItems, set):
+            # Treat a set as a list
+            blockItems = list (blockItems)
+            instanceCount = len (blockItems)
         elif IsPrimitiveType (blockItems):
             # Plain objects are wrapped to support self-references
             instanceCount = 1
@@ -499,6 +517,7 @@ class Template:
         """Read a single token from the stream."""
         token = ''
         start = inputStream.GetCurrentPosition ()
+        # Token starts with {{
         inputStream.Skip(2)
         while True:
             c = inputStream.Get()
