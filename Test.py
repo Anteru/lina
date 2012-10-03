@@ -140,12 +140,12 @@ class Test(unittest.TestCase):
         result=template.RenderSimple(block=[{'item' : '0'}, {'item' : '1'}])
         self.assertEqual("\t\t0\n\t\t1", result)
 
-    def testExpandWhiteSpaceSpace(self):
+    def testExpandWhitespaceSpace(self):
         template = Template.Template("{{_SPACE}}")
         result=template.RenderSimple()
         self.assertEqual(" ", result)
 
-    def testExpandWhiteSpaceNewline(self):
+    def testExpandWhitespaceNewline(self):
         template = Template.Template("{{_NEWLINE}}")
         result=template.RenderSimple()
         self.assertEqual("\n", result)
