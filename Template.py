@@ -1,6 +1,6 @@
 # coding=utf8
 # @author: Matthäus G. Chajdas
-# @license: 3-clause BSD
+# @license: 2-clause BSD
 
 import io
 import os
