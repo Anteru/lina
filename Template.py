@@ -5,6 +5,7 @@
 import io
 import os
 import logging
+import collections.abc
 
 class TemplateException(Exception):
 	def __init__(self, message, position=None):
@@ -439,15 +440,17 @@ class Template:
 		if (blockItems == None):
 			instanceCount = 1
 			blockItems = [{}]
-		elif isinstance(blockItems, dict):
+		elif isinstance(blockItems, collections.abc.Mapping):
 			blockItems = [blockItems]
 			instanceCount = 1
-		elif isinstance (blockItems, set):
+		elif isinstance (blockItems, collections.abc.Set):
 			# Treat a set as a list
 			blockItems = list (blockItems)
 			instanceCount = len (blockItems)
 		elif IsPrimitiveType (blockItems):
 			# Plain objects are wrapped to support self-references
+			# cannot use isinstance (Sequence) here as we don't want to treat
+			# str as a list
 			instanceCount = 1
 			blockItems = [blockItems]
 		else:
