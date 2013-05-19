@@ -4,6 +4,18 @@
 
 import unittest, Template
 
+class MemoryTemplateRepository(Template.TemplateRepository):
+    def __init__(self):
+        pass
+    
+    def Get(self, name):
+        if name == 'item':
+            return Template.Template ('{{item}}')
+        elif name == 'block':
+            return Template.Template ('{{#block}}{{.}}{{/block}}')
+        elif name == 'text':
+            return Template.Template ('text')
+
 class Test(unittest.TestCase):
     def testReplaceVariable(self):
         template = Template.Template ('{{test}}')
@@ -240,9 +252,18 @@ class Test(unittest.TestCase):
         template = Template.Template('{{#block}}')
         self.assertRaises(Template.InvalidBlock, template.RenderSimple)    
     
+    def testInvalidBlockEndRaisesException(self):
+        template = Template.Template('{{#block}}{{/other}}')
+        self.assertRaises(Template.InvalidBlock, template.RenderSimple)    
+    
     def testInvalidBlockNestingRaisesException (self):
         template = Template.Template('{{#block}}{{#otherblock}}{{/block}}{{/otherblock}}')
         self.assertRaises(Template.InvalidToken, template.RenderSimple)    
+    
+    def testIncludeItem (self):
+        repo = MemoryTemplateRepository ()
+        template = Template.Template ('{{>item}}', repo)
+        self.assertEqual('theitem', template.RenderSimple(item='theitem'))
     
 if __name__ == '__main__':
     unittest.main()
