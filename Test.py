@@ -235,5 +235,14 @@ class Test(unittest.TestCase):
         template = Template.Template('{{item:suffix=a:width=-4}}')
         result=template.RenderSimple(item='b')
         self.assertEqual('  ba', result)
+        
+    def testMissingBlockEndRaisesException (self):
+        template = Template.Template('{{#block}}')
+        self.assertRaises(Template.InvalidBlock, template.RenderSimple)    
+    
+    def testInvalidBlockNestingRaisesException (self):
+        template = Template.Template('{{#block}}{{#otherblock}}{{/block}}{{/otherblock}}')
+        self.assertRaises(Template.InvalidToken, template.RenderSimple)    
+    
 if __name__ == '__main__':
     unittest.main()
