@@ -200,6 +200,40 @@ class Test(unittest.TestCase):
         template = Template.Template('{{item:hex}}')
         result = template.RenderSimple(item=127)
         self.assertEqual('0x7F', result)
+        
+    def testEscapeNewlineFormatter (self):
+        template = Template.Template ('{{item:escape-newlines}}')
+        result = template.RenderSimple(item='\n')
+        self.assertEqual('\\n', result)
+        
+    def testWrapStringFormatter (self):
+        template = Template.Template ('{{item:wrap-string}}')
+        result = template.RenderSimple(item='Some string')
+        self.assertEqual('"Some string"', result)
+        
+    def testWrapStringFormatterIgnoresNonStrings (self):
+        template = Template.Template ('{{item:wrap-string}}')
+        result = template.RenderSimple(item=256)
+        self.assertEqual('256', result)
+        
+    def testCBooleanFormatter (self):
+        template = Template.Template ('{{true:cbool}}, {{false:cbool}}')
+        result = template.RenderSimple(true=True,false=False)
+        self.assertEqual('true, false', result)
+        
+    def testCBooleanFormatterIgnoresNonBooleans (self):
+        template = Template.Template ('{{item:cbool}}')
+        result = template.RenderSimple(item=1)
+        self.assertEqual('1', result)
+           
+    def testExpandSuffixAfterWidth(self):
+        template = Template.Template('{{item:width=-4:suffix=a}}')
+        result=template.RenderSimple(item='b')
+        self.assertEqual('   ba', result)
 
+    def testExpandSuffixBeforeWidth(self):
+        template = Template.Template('{{item:suffix=a:width=-4}}')
+        result=template.RenderSimple(item='b')
+        self.assertEqual('  ba', result)
 if __name__ == '__main__':
     unittest.main()
