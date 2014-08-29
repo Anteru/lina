@@ -6,7 +6,7 @@ Miranda is a template engine in the spirit of Google's [CTemplate](http://code.g
 Requirements
 ------------
 
-Python 3 is all that is needed. Tested with Python 3.1, 3.2 and 3.3. Python 3.0 is not recommended.
+Python 3.4 or later. Previous versions of Python will not work due to the lack of enumerations.
 
 Getting started
 ---------------
@@ -17,8 +17,8 @@ The most trivial template is:
 
 It can be evaluated using
 
-    import Miranda
-    template = Miranda.Template ('Hello {{name}}!')
+    import miranda
+    template = miranda.Template ('Hello {{name}}!')
     print (template.RenderSimple (name = "Bob"))
 
 This will print:
