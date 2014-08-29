@@ -365,7 +365,7 @@ class Template:
 		instance. See also TemplateRepository()."""
 		self.__input = TextStream (template)
 		self.__resolver = includeResolver
-		self.__log = logging.getLogger('Miranda.Template')
+		self.__log = logging.getLogger('Lina.Template')
 
 	def __ExpandVariable(self, outputStream, token, itemStack):
 		self.__log.debug("Expanding variable '{}'".format(token.GetName()))

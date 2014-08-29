@@ -3,7 +3,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-from miranda import *
+from lina import *
 import pytest
 
 class MemoryTemplateRepository(TemplateRepository):
