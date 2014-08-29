@@ -8,9 +8,14 @@ import logging
 import collections.abc
 
 class TemplateException(Exception):
-	def __init__(self, message, position=None):
+	def __init__(self, message, position):
 		Exception.__init__(self, message)
-		self.position = position
+		self._position = position
+
+	def GetPosition (self):
+		from collections import namedtuple
+		p = namedtuple ('position', ['line', 'column'])
+		return p (self._position [0], self._position [1])
 
 class InvalidFormatter(TemplateException):
 	pass
@@ -33,7 +38,6 @@ class TextStream:
 
 	def Reset(self):
 		self.current = 0
-		self.indent = 0
 		self.row = 1
 		self.column = 1
 
@@ -48,8 +52,6 @@ class TextStream:
 				self.indent = 0
 				self.column = 1
 				self.row += 1
-			elif (result == '\t'):
-				self.indent += 1
 
 		return result
 
@@ -238,7 +240,7 @@ class HexFormatter(Formatter):
 		result = '0x' + result [2:].upper ()
 		return result
 
-def GetFormatter (name, value = None):
+def GetFormatter (name, value = None, position=None):
 	'''Get a formatter. If the formatter cannot be found, an exception is raised.'''
 	if name == 'width' or name == 'w':
 		return WidthFormatter (int (value))
@@ -263,7 +265,8 @@ def GetFormatter (name, value = None):
 	elif name == 'hex':
 		return HexFormatter ()
 	else:
-		raise InvalidFormatter("Invalid formatter '{0}'".format (name))
+		raise InvalidFormatter("Invalid formatter '{0}'".format (name),
+			position)
 
 class Token:
 	'''Represents a single token.
@@ -277,7 +280,7 @@ class Token:
 
 	__validPrefixes = {'#', '/', '_', '>'}
 
-	def __init__(self, name, start, end):
+	def __init__(self, name, start, end, position):
 		for prefix in self.__validPrefixes:
 			if (name.startswith(prefix)):
 				self.prefix = prefix
@@ -306,7 +309,7 @@ class Token:
 				else:
 					(key, value) = (flag, None)
 
-				self.formatters.append (GetFormatter (key, value))
+				self.formatters.append (GetFormatter (key, value, position))
 
 	def GetName(self):
 		return self.name
@@ -335,13 +338,14 @@ class Token:
 	def IsSelfReference (self):
 		return self.name[0] == '.'
 
-	def EvaluateWhiteSpaceToken (self):
+	def EvaluateWhiteSpaceToken (self, position):
 		if (self.name == 'NEWLINE'):
 			return '\n'
 		elif (self.name == 'SPACE'):
 			return ' '
 		else:
-			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.name))
+			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.name),
+				position)
 
 	def IsValue (self):
 		return self.prefix == None and self.name != '.'
@@ -386,6 +390,7 @@ class Template:
 						value = value [component]
 				break
 		else:
+			# Variable not found, ignore
 			return
 
 		for formatter in token.GetFormatters():
@@ -394,8 +399,7 @@ class Template:
 
 		if value is not None:
 			value = str (value)
-
-		if value == None:
+		else:
 			self.log.warn ("None/Null value found for variable '{}' after all formatters have run".format (token.GetName ()))
 			return
 
@@ -514,6 +518,7 @@ class Template:
 		"""Read a single token from the stream."""
 		token = ''
 		start = inputStream.GetCurrentPosition ()
+		startPosition = inputStream.GetRowColumn ()
 		# Token starts with {{
 		inputStream.Skip(2)
 		while True:
@@ -527,7 +532,7 @@ class Template:
 				if inputStream.Peek () == '}':
 					inputStream.Get ()
 					end = inputStream.GetCurrentPosition ()
-					return Token(token, start, end)
+					return Token(token, start, end, startPosition)
 				else:
 					raise InvalidToken("Token '{}' incorrectly delimited".format (token),
 						inputStream.GetRowColumn ())
@@ -557,7 +562,8 @@ class Template:
 						return token
 					else:
 						break
-		raise InvalidBlock ("Could not find block end for '{}'".format (blockname))
+		raise InvalidBlock ("Could not find block end for '{}'".format (blockname),
+			inputStream.GetRowColumn ())
 
 	def __ExpandInclude (self, outputStream, token, itemStack):
 		self.log.debug("Expanding include statement: '{}'".format(token.GetName()))
@@ -580,7 +586,7 @@ class Template:
 					self.__ExpandBlock(inputStream, outputStream,
 									   token, blockEnd, itemStack)
 				elif (token.IsWhiteSpaceToken()):
-					outputStream.write (token.EvaluateWhiteSpaceToken())
+					outputStream.write (token.EvaluateWhiteSpaceToken(inputStream.GetRowColumn ()))
 				elif (token.IsIncludeToken ()):
 					self.__ExpandInclude (outputStream, token, itemStack)
 			else:

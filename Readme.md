@@ -17,8 +17,8 @@ The most trivial template is:
 
 It can be evaluated using
 
-    import Miranda.Template
-    template = Miranda.Template.Template ('Hello {{name}}!')
+    import Miranda
+    template = Miranda.Template ('Hello {{name}}!')
     print (template.RenderSimple (name = "Bob"))
 
 This will print:
