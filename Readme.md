@@ -8,6 +8,13 @@ Requirements
 
 Python 3.4 or later. Previous versions of Python will not work due to the lack of enumerations.
 
+Installation
+------------
+
+Miranda is available from PyPi, so you can install directly using ``pip``:
+
+    pip install miranda
+
 Getting started
 ---------------
 
