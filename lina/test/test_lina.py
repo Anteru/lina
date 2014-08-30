@@ -220,6 +220,29 @@ def testExpandSingleItemCompound ():
     result = template.RenderSimple(item={'field':'value'})
     assert ('This is value' == result)
 
+def testExpandItemCompound ():
+    template = Template('{{#items}}This is {{item.field}}{{/items}}')
+    class Item:
+        def __init__ (self, field):
+            self.field = field
+    result = template.RenderSimple(items=[{'item':Item ('value')}])
+    assert ('This is value' == result)
+
+def testExpandDictionaryCompound ():
+    template = Template('{{#items}}This is {{item.field}}{{/items}}')
+    result = template.RenderSimple(items=[{'item': {'field':'value'}}])
+    assert ('This is value' == result)
+
+def testExpandCompoundThrowsIfNoSuchFieldNone ():
+    template = Template('{{#items}}This is {{item.field}}{{/items}}')
+    with pytest.raises (TemplateException):
+        result = template.RenderSimple(items=[{'item':None}])
+
+def testExpandCompoundThrowsIfNoSuchFieldEmptyDict ():
+    template = Template('{{#items}}This is {{item.field}}{{/items}}')
+    with pytest.raises (TemplateException):
+        result = template.RenderSimple(items=[{'item':{}}])
+
 def testFormatAsHex ():
     template = Template('{{item:hex}}')
     result = template.RenderSimple(item=127)

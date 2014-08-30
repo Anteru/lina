@@ -16,6 +16,9 @@ class TemplateException(Exception):
 		self._position = position
 
 	def GetPosition (self):
+		'''Get the position where the exception occured.
+
+		:returns: An object with two fields, ``line`` and ``column``.'''
 		from collections import namedtuple
 		p = namedtuple ('position', ['line', 'column'])
 		return p (self._position [0], self._position [1])
@@ -33,7 +36,10 @@ class InvalidBlock(TemplateException):
 	pass
 
 class TextStream:
-	'''A read-only text stream. Stores the current position.'''
+	'''A read-only text stream.
+
+	The text stream is used for input only and keeps track of the current read
+	pointer position in terms of line/column numbers.'''
 	def __init__(self, text):
 		self._text = text
 		self._length = len (text)
@@ -45,6 +51,9 @@ class TextStream:
 		self._column = 1
 
 	def Get (self):
+		'''Get a character.
+
+		If the end of the stream has been reached, ``None`` is returned.'''
 		result = None
 
 		if self._offset < self._length:
@@ -102,12 +111,15 @@ class TextStream:
 
 @unique
 class FormatterType(Enum):
+	'''The formatter type, either ``Block`` or ``Value``.'''
 	Block = 0
 	Value = 1
 
 class Formatter:
-	'''Base class for all formatters. A formatter can be used to transform
-	blocks/values during expansion.'''
+	'''Base class for all formatters.
+
+	A formatter can be used to transform blocks/values during expansion.'''
+
 	def __init__(self, formatterType):
 		assert formatterType != None, 'Type must be set for Formatter'
 		assert isinstance(formatterType, FormatterType)
@@ -123,13 +135,21 @@ class Formatter:
 		'''Format a value or a complete block.'''
 		return text
 
-	def OnBlockBegin(self, outputStream, isFirst):
-		'''Called before a block is expanded.'''
+	def OnBlockBegin(self, isFirst):
+		'''Called before a block is expanded.
+
+		:param isFirst: ``True`` if this is the first expansion of the block.
+		:returns: String or ``None``. If a string is returned, it is prepended
+			before the current block expansion.'''
 		assert self.IsBlockFormatter ()
 		pass
 
-	def OnBlockEnd(self, outputStream, isLast):
-		'''Called after a block has been expanded.'''
+	def OnBlockEnd(self, isLast):
+		'''Called after a block has been expanded.
+
+		:param isLast: ``True`` if this is the last expansion of the block.
+		:returns: String or ``None``. If a string is returned, it is appended
+			after the current block expansion.'''
 		assert self.IsBlockFormatter ()
 		pass
 
@@ -140,27 +160,31 @@ class IndentFormatter(Formatter):
 		self._depth = depth
 		self._tabs = '\t' * depth
 
-	def OnBlockBegin(self, outputStream, isFirst):
-		outputStream.write (self._tabs)
+	def OnBlockBegin(self, isFirst):
+		return self._tabs
 
 	def Format(self, block):
 		return block.replace ('\n', '\n' + self._tabs)
 
 class ListSeparatorFormatter(Formatter):
-	'''Separate block entries.'''
+	'''Separate block entries.
+
+	This formatter will insert a value between block expansions.'''
 	def __init__(self, value):
 		Formatter.__init__(self, FormatterType.Block)
 		value = value.replace ('NEWLINE', '\n')
 		value = value.replace ('SPACE', ' ')
 		self._value = value
 
-	def OnBlockEnd(self, outputStream, isLast):
+	def OnBlockEnd(self, isLast):
 		if not isLast:
-			outputStream.write (self._value)
+			return self._value
 
 class WidthFormatter(Formatter):
-	'''Align the value to a particular width. Negative values
-	align to the left '  42', positive values to the right '42  '.'''
+	'''Align the value to a particular width.
+
+	Negative values align to the left (i.e., the padding is added on the left:
+	``'  42'``), positive values to the right (``'42  '``).'''
 	def __init__(self, width):
 		Formatter.__init__(self, FormatterType.Value)
 		self._width = str(width) if width >= 0 else '>' + str(-width)
@@ -249,7 +273,9 @@ class HexFormatter(Formatter):
 		return result
 
 def GetFormatter (name, value = None, position=None):
-	'''Get a formatter. If the formatter cannot be found, an exception is raised.'''
+	'''Get a formatter.
+
+	If the formatter cannot be found, an exception is raised.'''
 	if name == 'width' or name == 'w':
 		return WidthFormatter (int (value))
 	elif name == 'prefix':
@@ -278,8 +304,10 @@ def GetFormatter (name, value = None, position=None):
 
 class Token:
 	'''Represents a single token.
-	Each token may contain an optional list of flags, separated by :. The
-	grammar implemented here is:
+
+	Each token may contain an optional list of flags, separated by colons. The
+	grammar implemented here is::
+
 		[prefix]?[^:}]+(:[^:})+, for example:
 		{{#Foo}} -> name = Foo, prefix = #
 		{{Bar:width=8}} -> name = Bar, prefix = None,
@@ -291,23 +319,24 @@ class Token:
 	def __init__(self, name, start, end, position):
 		for prefix in self.__validPrefixes:
 			if (name.startswith(prefix)):
-				self.prefix = prefix
-				self.name = name [len(prefix):]
+				self.__prefix = prefix
+				self.__name = name [len(prefix):]
 				break
 		else:
-			self.name = name
-			self.prefix = None
+			self.__name = name
+			self.__prefix = None
 
-		self.start = start
-		self.end = end
+		self.__start = start
+		self.__end = end
+		self.__position = position
 
-		separator = self.name.find(':')
+		separator = self.__name.find(':')
 
 		self.formatters = list ()
 
 		if (separator > 0):
-			tmp = self.name
-			self.name = tmp[:separator]
+			tmp = self.__name
+			self.__name = tmp[:separator]
 			flags = tmp[separator+1:].split(':')
 
 			for flag in flags:
@@ -320,51 +349,61 @@ class Token:
 				self.formatters.append (GetFormatter (key, value, position))
 
 	def GetName(self):
-		return self.name
+		return self.__name
 
 	def GetStart(self):
-		return self.start
+		return self.__start
 
 	def GetEnd(self):
-		return self.end
+		return self.__end
+
+	def GetPosition (self):
+		return self.__position
 
 	def GetFormatters(self):
 		return self.formatters
 
 	def IsBlockStart (self):
-		return self.prefix == '#'
+		return self.__prefix == '#'
 
 	def IsBlockClose (self):
-		return self.prefix == '/'
+		return self.__prefix == '/'
 
 	def IsWhiteSpaceToken (self):
-		return self.prefix == '_'
+		return self.__prefix == '_'
 
 	def IsIncludeToken (self):
-		return self.prefix == '>'
+		return self.__prefix == '>'
 
 	def IsSelfReference (self):
-		return self.name[0] == '.'
+		return self.__name[0] == '.'
 
 	def EvaluateWhiteSpaceToken (self, position):
-		if (self.name == 'NEWLINE'):
+		if (self.__name == 'NEWLINE'):
 			return '\n'
-		elif (self.name == 'SPACE'):
+		elif (self.__name == 'SPACE'):
 			return ' '
 		else:
-			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.name),
+			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.__name),
 				position)
 
 	def IsValue (self):
-		return self.prefix == None and self.name != '.'
+		return self.__prefix == None and self.__name != '.'
+
+class IncludeHandler:
+	'''Base interface for include handlers.'''
+	def Get(self, name):
+		pass
 
 class Template:
-	def __init__(self, template, includeResolver=None):
-		"""includeResolver is used to support nested templates. It must support
+	'''The main template class.'''
+
+	def __init__(self, template, includeHandler=None):
+		'''includeHandler is used to support nested templates. It must support
 		a single function, Get(templateName) which returns a new Template
-		instance. See also TemplateRepository()."""
+		instance. See also TemplateRepository().'''
 		self.__input = TextStream (template)
-		self.__resolver = includeResolver
+		self.__includeHandler = includeHandler
 		self.__log = logging.getLogger('Lina.Template')
 
 	def __ExpandVariable(self, outputStream, token, itemStack):
@@ -395,7 +434,19 @@ class Template:
 
 				if compound is not None:
 					for component in compound[1:]:
-						value = value [component]
+						try:
+							if hasattr (value, component):
+								# Field
+								value = getattr (value, component)
+							elif component in value:
+								# Dictionary lookup
+								value = value [component]
+							else:
+								raise Exception ()
+						except:
+							raise TemplateException ("Cannot expand token, component '{}' is missing".format (component),
+								token.GetPosition ())
+
 				break
 		else:
 			# Variable not found, ignore
@@ -492,10 +543,11 @@ class Template:
 				current [blockName + "#Last"] = None
 
 			hasBlockFormatter = False
-			for formatter in start.GetFormatters():
-				if formatter.IsBlockFormatter():
-					hasBlockFormatter = True
-					formatter.OnBlockBegin (outputStream, isFirst)
+			for formatter in [f for f in start.GetFormatters() if f.IsBlockFormatter()]:
+				hasBlockFormatter = True
+				blockFormatterPrefix = formatter.OnBlockBegin (isFirst)
+				if blockFormatterPrefix:
+					outputStream.write (blockFormatterPrefix)
 
 			itemStack.append (current)
 			if hasBlockFormatter:
@@ -518,9 +570,10 @@ class Template:
 			itemStack.pop ()
 
 			if hasBlockFormatter:
-				for formatter in start.GetFormatters():
-					if formatter.IsBlockFormatter():
-						formatter.OnBlockEnd (outputStream, isLast)
+				for formatter in [f for f  in start.GetFormatters() if f.IsBlockFormatter()]:
+					blockFormatterSuffix = formatter.OnBlockEnd (isLast)
+					if blockFormatterSuffix:
+						outputStream.write (blockFormatterSuffix)
 
 	def __ReadToken(self, inputStream):
 		"""Read a single token from the stream."""
@@ -575,8 +628,8 @@ class Template:
 
 	def __ExpandInclude (self, outputStream, token, itemStack):
 		self.__log.debug("Expanding include statement: '{}'".format(token.GetName()))
-		assert self.__resolver is not None, "Cannot resolve includes without an include resolver"
-		template = self.__resolver.Get (token.GetName ())
+		assert self.__includeHandler is not None, "Cannot resolve includes without an include handler"
+		template = self.__includeHandler.Get (token.GetName ())
 		template.__RenderTo (outputStream, itemStack)
 
 	def __Render(self, inputStream, outputStream, itemStack):
@@ -604,8 +657,9 @@ class Template:
 	def __RenderTo (self, outputStream, itemStack):
 		self.__Render (self.__input, outputStream, itemStack)
 
-	def Render(self, dictionary):
-		itemStack = [dictionary]
+	def Render(self, context):
+		'''Render the template using the provided context.'''
+		itemStack = [context]
 
 		output = io.StringIO ()
 		self.__Render(self.__input, output, itemStack)
@@ -613,11 +667,16 @@ class Template:
 		return output.getvalue ()
 
 	def RenderSimple(self, **items):
-		'''Simpler rendering function. Build the dictionary from the parameter list.
-		This is just a convenience function which calls Render(self, dict).'''
+		'''Simple rendering function.
+
+		This is just a convenience function which creates the context from the passed
+		items and forwards them to :py:meth:`Template.Render`.'''
 		return self.Render (items)
 
-class TemplateRepository:
+class TemplateRepository (IncludeHandler):
+	'''A file template repository.
+
+	This template repository will load files from a specified folder.'''
 	def __init__(self, templateDirectory, suffix = ''):
 		self.dir = templateDirectory
 		self.suffix = suffix
