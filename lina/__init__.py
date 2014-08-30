@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import io
 import os
