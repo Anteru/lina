@@ -1,7 +1,7 @@
 Welcome to Lina
 ===============
 
-Lina is a minimal template system for Python, modelled after Google's `CTemplate <https://code.google.com/p/ctemplate>`_ library. It is designed to provide fast, safe template evaluation to generate code or other text documents.::
+Lina is a minimal template system for Python, modelled after Google's `CTemplate <https://code.google.com/p/ctemplate>`_ library. It is designed to provide fast, safe template evaluation to generate code or other text documents. ::
 
     enum DataTypes {
     {{#types:list-separator=,NEWLINE}}  {{name}}={{value:hex}}{{/types}}
@@ -37,7 +37,7 @@ This requires to pass an array of named objects::
 
     template.Render ({'users':[{'name':'Alice'}, {'name':'Bob'}]})
 
-In some cases, this is unnecessary complicated. Lina provides a special syntax to access the *current* element, using a single dot. The template aboves can be then simplified to::
+In some cases, this is unnecessary complicated. Lina provides a special syntax to access the *current* element, using a single dot. Using a self-reference, the template above can be simplified to::
 
     {{#users}}Hello {{.}}!{{/users}}
 
@@ -49,19 +49,21 @@ or even simpler using :py:meth:`lina.Template.RenderSimple`::
 
     template.RenderSimple (users = ['Alice', 'Bob'])
 
-Both self-references as well as items can also access fields of an object. Assuming the ``User`` class has fields ``name``, ``age``, the follwing template will print the user name and age::
+Both self-references as well as values can also access fields of an object. Assuming the ``User`` class has fields ``name``, ``age``, the follwing template will print the user name and age::
 
     {{#users}}Hello {{.name}}, you are {{.age}} years old!{{/users}}
 
-The field accessor syntax works for both fields as well as associative container, that is, for Lina, the following two objects are equivalent::
+The field accessor syntax works for both fields as well as associative containers, that is, for Lina, the following two objects are equivalent::
 
-    {'name':'Alice'}
+    u = {'name':'Alice'}
 
 and::
 
     class User:
         def __init__(self, name):
             self.name = name
+
+    u = User ('Alice')
 
 For blocks, Lina provides additional modifiers to check whether the current block execution is the first, an intermediate or the last one::
 
