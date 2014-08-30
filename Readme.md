@@ -26,8 +26,8 @@ The most trivial template is:
 
 It can be evaluated using
 
-    import miranda
-    template = miranda.Template ('Hello {{name}}!')
+    import lina
+    template = lina.Template ('Hello {{name}}!')
     print (template.RenderSimple (name = "Bob"))
 
 This will print:
