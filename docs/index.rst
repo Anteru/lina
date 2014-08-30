@@ -9,7 +9,7 @@ Lina is a minimal template system for Python, modelled after Google's `CTemplate
 
 evaluated with::
 
-    formats = [{'name':'Vector3i', value: 0x301}, {'name':'Vector3f', 'value': 0x302}]
+    formats = [{'name':'Vector3i', 'value': 0x301}, {'name':'Vector3f', 'value': 0x302}]
 
 will produce::
 
