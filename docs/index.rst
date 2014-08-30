@@ -53,7 +53,7 @@ Both self-references as well as values can also access fields of an object. Assu
 
     {{#users}}Hello {{.name}}, you are {{.age}} years old!{{/users}}
 
-The field accessor syntax works for both fields as well as associative containers, that is, for Lina, the following two objects are equivalent::
+For an object, use ``{{item.field}}``. The field accessor syntax works for both fields as well as associative containers, that is, for Lina, the following two objects are equivalent::
 
     u = {'name':'Alice'}
 
