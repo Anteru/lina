@@ -71,6 +71,8 @@ For blocks, Lina provides additional modifiers to check whether the current bloc
 
 ``#First`` will be only expanded for the first iteration, ``#Separator`` will be expanded for every expansion which is neither first nor last and ``#Last`` will be expanded for the last iteration only. If there is only one element, it will considered both first and last item of the sequence.
 
+Whitespace can be also part of a template. Use ``{{_NEWLINE}}`` to get a new line character inserted into the stream, and ``{{_SPACE}}`` to get a blank space.
+
 Contents:
 
 .. toctree::

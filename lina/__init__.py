@@ -11,6 +11,7 @@ import collections.abc
 from enum import Enum, unique
 
 class TemplateException(Exception):
+	'''Base class for all exceptions thrown by Lina.'''
 	def __init__(self, message, position):
 		Exception.__init__(self, message)
 		self._position = position
@@ -24,15 +25,21 @@ class TemplateException(Exception):
 		return p (self._position [0], self._position [1])
 
 class InvalidFormatter(TemplateException):
+	'''An invalid formatter was encountered.
+
+	This exception is raised when a formatter could not be found or instantiated.'''
 	pass
 
 class InvalidToken(TemplateException):
+	'''An invalid token was encountered.'''
 	pass
 
 class InvalidWhitespaceToken(TemplateException):
+	'''An invalid whitespace token was encountered.'''
 	pass
 
 class InvalidBlock(TemplateException):
+	'''An invalid block was encountered.'''
 	pass
 
 class TextStream:
@@ -46,6 +53,7 @@ class TextStream:
 		self.Reset ()
 
 	def Reset(self):
+		'''Reset back to the beginning of the stream.'''
 		self._offset = 0
 		self._line = 1
 		self._column = 1
@@ -68,16 +76,19 @@ class TextStream:
 		return result
 
 	def Substring(self, start, end):
+		'''Get a substring of the stream.'''
 		assert start >= 0
 		assert end > start
 		assert end < self._length
 		return self._text [start:end]
 
 	def GetOffset(self):
+		'''Get the current read offset in characters from the beginning of the stream.'''
 		assert self._offset >= 0
 		return self._offset
 
 	def GetPosition (self):
+		'''Get the current read position as a pair (line, column).'''
 		assert self._line >= 1
 		assert self._column >= 1
 		return (self._line, self._column)
@@ -126,9 +137,11 @@ class Formatter:
 		self.__type = formatterType
 
 	def IsValueFormatter(self):
+		'''Check if this formatter is a value formatter.'''
 		return self.__type == FormatterType.Value
 
 	def IsBlockFormatter(self):
+		'''Check if this formatter is a block formatter.'''
 		return self.__type == FormatterType.Block
 
 	def Format (self, text):
@@ -332,7 +345,7 @@ class Token:
 
 		separator = self.__name.find(':')
 
-		self.formatters = list ()
+		self.__formatters = list ()
 
 		if (separator > 0):
 			tmp = self.__name
@@ -346,39 +359,53 @@ class Token:
 				else:
 					(key, value) = (flag, None)
 
-				self.formatters.append (GetFormatter (key, value, position))
+				self.__formatters.append (GetFormatter (key, value, position))
 
 	def GetName(self):
+		'''Get the name of this token.'''
 		return self.__name
 
 	def GetStart(self):
+		'''Get the start offset.'''
 		return self.__start
 
 	def GetEnd(self):
+		'''Get the end offset.'''
 		return self.__end
 
 	def GetPosition (self):
+		'''Get the position as a (line, column) pair.'''
 		return self.__position
 
 	def GetFormatters(self):
-		return self.formatters
+		'''Get all active formatters for this token.'''
+		return self.__formatters
 
 	def IsBlockStart (self):
+		'''Return true if this token is a block-start token.'''
 		return self.__prefix == '#'
 
 	def IsBlockClose (self):
+		'''Return true if this token is a block-close token.'''
 		return self.__prefix == '/'
 
 	def IsWhiteSpaceToken (self):
+		'''Return true if this token is a whitespace directive.'''
 		return self.__prefix == '_'
 
 	def IsIncludeToken (self):
+		'''Return true if this token is an include directive.'''
 		return self.__prefix == '>'
 
 	def IsSelfReference (self):
+		'''Return true if this token is a self-reference.'''
 		return self.__name[0] == '.'
 
 	def EvaluateWhiteSpaceToken (self, position):
+		'''Get the content of this token if this token is a whitespace token.
+
+		If the content is not a valid whitespace name, this function will raise
+		:py:class:`InvalidWhitespaceToken`.'''
 		if (self.__name == 'NEWLINE'):
 			return '\n'
 		elif (self.__name == 'SPACE'):
@@ -407,6 +434,7 @@ class Template:
 		self.__log = logging.getLogger('Lina.Template')
 
 	def __ExpandVariable(self, outputStream, token, itemStack):
+		'''Expand a value token.'''
 		self.__log.debug("Expanding variable '{}'".format(token.GetName()))
 		assert token != None
 		assert itemStack != None
@@ -465,7 +493,8 @@ class Template:
 		outputStream.write (value)
 
 	def __ExpandBlock(self, inputStream, outputStream,
-					  start, end, itemStack):
+					  start, end, context):
+		'''Expand a block.'''
 		def IsPrimitiveType(e):
 			return isinstance(e, str) or isinstance (e, int) or \
 				isinstance (e, float) or isinstance (e, bool)
@@ -477,14 +506,14 @@ class Template:
 
 		blockName = start.GetName ()
 
-		assert (itemStack != None)
-		assert len (itemStack) > 0
-		assert itemStack [-1] != None
+		assert (context != None)
+		assert len (context) > 0
+		assert context [-1] != None
 
 		# Must be present somewhere along the stack
 		# Search up in case we have the same block nested
 		blockItems = None
-		for items in itemStack:
+		for items in context:
 			if blockName in items:
 				blockItems = items [blockName]
 				break
@@ -549,13 +578,13 @@ class Template:
 				if blockFormatterPrefix:
 					outputStream.write (blockFormatterPrefix)
 
-			itemStack.append (current)
+			context.append (current)
 			if hasBlockFormatter:
 				# Write the string to a temporary stream if a block formatter is
 				# present
 				tmpStream = io.StringIO()
 
-				self.__Render(TextStream (blockContent), tmpStream, itemStack)
+				self.__Render(TextStream (blockContent), tmpStream, context)
 
 				tmpString = tmpStream.getvalue()
 
@@ -565,9 +594,9 @@ class Template:
 				outputStream.write (tmpString)
 			else:
 				# Directly render into output stream for maximum performance
-				self.__Render(TextStream (blockContent), outputStream, itemStack)
+				self.__Render(TextStream (blockContent), outputStream, context)
 
-			itemStack.pop ()
+			context.pop ()
 
 			if hasBlockFormatter:
 				for formatter in [f for f  in start.GetFormatters() if f.IsBlockFormatter()]:
@@ -576,7 +605,7 @@ class Template:
 						outputStream.write (blockFormatterSuffix)
 
 	def __ReadToken(self, inputStream):
-		"""Read a single token from the stream."""
+		'''Read a single token from the stream.'''
 		token = ''
 		start = inputStream.GetOffset ()
 		startPosition = inputStream.GetPosition  ()
@@ -627,6 +656,7 @@ class Template:
 			inputStream.GetPosition  ())
 
 	def __ExpandInclude (self, outputStream, token, itemStack):
+		'''Expand an include directive.'''
 		self.__log.debug("Expanding include statement: '{}'".format(token.GetName()))
 		assert self.__includeHandler is not None, "Cannot resolve includes without an include handler"
 		template = self.__includeHandler.Get (token.GetName ())
@@ -659,10 +689,10 @@ class Template:
 
 	def Render(self, context):
 		'''Render the template using the provided context.'''
-		itemStack = [context]
+		context = [context]
 
 		output = io.StringIO ()
-		self.__Render(self.__input, output, itemStack)
+		self.__Render(self.__input, output, context)
 		self.__input.Reset ()
 		return output.getvalue ()
 

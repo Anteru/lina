@@ -23,6 +23,11 @@ def testReplaceVariable():
     result = template.RenderSimple(test='value')
     assert ('value' == result)
 
+def testReplaceVariableUsingRender():
+    template = Template ('{{test}}')
+    result = template.Render({'test':'value'})
+    assert ('value' == result)
+
 def testExpandDictionary():
     template = Template('{{#block}}{{test}}{{/block}}')
     result=template.RenderSimple(block={'test':'value'})
