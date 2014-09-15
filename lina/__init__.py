@@ -466,7 +466,6 @@ class Template:
 							# If [number], we use it as a list index
 							if component [0] == '[' and component [-1] == ']':
 								index = int (component [1:-1])
-								print (value)
 								value = value [index]
 							# try as a field name
 							elif hasattr (value, component):
