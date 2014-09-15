@@ -65,6 +65,19 @@ and::
 
     u = User ('Alice')
 
+It is also possible to directly reference indexed items using ``[0]``, ``[1]``, etc. For instance, the following template::
+
+    {{#vectors}}X: {{.[0]}}, Y: {{.[1]}}, Z: {{.[2]}}\n{{/vectors}}
+
+rendered with::
+
+    template.RenderSimple (vectors = [[0, 1, 2], [3, 4, 5]])
+
+will produce::
+
+    X: 0, Y: 1, Z: 2
+    X: 3, Y: 4, Z: 5
+
 For blocks, Lina provides additional modifiers to check whether the current block execution is the first, an intermediate or the last one::
 
     {{#block}}{{variable}}{{#block#Separator}},{{/block#Separator}}{{/block}}

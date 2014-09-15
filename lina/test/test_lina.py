@@ -225,12 +225,22 @@ def testExpandSingleItemCompound ():
     result = template.RenderSimple(item={'field':'value'})
     assert ('This is value' == result)
 
+def testExpandSingleItemList ():
+    template = Template ('{{#item}}This is {{.[1]}}{{/item}}')
+    result = template.RenderSimple (item=[['first', 'second']])
+    assert ('This is second' == result)
+
 def testExpandItemCompound ():
     template = Template('{{#items}}This is {{item.field}}{{/items}}')
     class Item:
         def __init__ (self, field):
             self.field = field
     result = template.RenderSimple(items=[{'item':Item ('value')}])
+    assert ('This is value' == result)
+
+def testExpandListCompound ():
+    template = Template('{{#items}}This is {{item.[1]}}{{/items}}')
+    result = template.RenderSimple(items=[{'item': ['wrong', 'value']}])
     assert ('This is value' == result)
 
 def testExpandDictionaryCompound ():

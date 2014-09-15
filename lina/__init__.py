@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 import io
 import os
@@ -463,16 +463,23 @@ class Template:
 				if compound is not None:
 					for component in compound[1:]:
 						try:
-							if hasattr (value, component):
+							# If [number], we use it as a list index
+							if component [0] == '[' and component [-1] == ']':
+								index = int (component [1:-1])
+								print (value)
+								value = value [index]
+							# try as a field name
+							elif hasattr (value, component):
 								# Field
 								value = getattr (value, component)
+							# try dictionary lookup
 							elif component in value:
 								# Dictionary lookup
 								value = value [component]
 							else:
 								raise Exception ()
 						except:
-							raise TemplateException ("Cannot expand token, component '{}' is missing".format (component),
+							raise TemplateException ("Cannot expand token, component '{}' is missing or invalid".format (component),
 								token.GetPosition ())
 
 				break
