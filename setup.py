@@ -42,6 +42,5 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3.4',
         'Topic :: Software Development :: Pre-processors',
-
     ]
 )

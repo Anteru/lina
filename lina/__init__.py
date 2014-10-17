@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 import io
 import os
@@ -327,7 +327,7 @@ class Token:
 							flags = {width:8}
 	'''
 
-	__validPrefixes = {'#', '/', '_', '>'}
+	__validPrefixes = {'#', '/', '_', '>', '!'}
 
 	def __init__(self, name, start, end, position):
 		for prefix in self.__validPrefixes:
@@ -384,6 +384,10 @@ class Token:
 	def IsBlockStart (self):
 		'''Return true if this token is a block-start token.'''
 		return self.__prefix == '#'
+
+	def IsNegatedBlockStart (self):
+		'''Return true if this token is a negated block-start token.'''
+		return self.__prefix == '!'
 
 	def IsBlockClose (self):
 		'''Return true if this token is a block-close token.'''
@@ -507,7 +511,7 @@ class Template:
 
 		self.__log.debug("Expanding block '{}'".format(start.GetName()))
 		assert start.GetName () == end.GetName ()
-		assert start.IsBlockStart ()
+		assert start.IsBlockStart () or start.IsNegatedBlockStart ()
 		assert end.IsBlockClose ()
 
 		blockName = start.GetName ()
@@ -522,9 +526,13 @@ class Template:
 		for items in context:
 			if blockName in items:
 				blockItems = items [blockName]
+
+				if start.IsNegatedBlockStart ():
+					return
 				break
 		else:
-			return
+			if not start.IsNegatedBlockStart ():
+				return
 
 		blockContent = inputStream.Substring(start.GetEnd (), end.GetStart ())
 
@@ -641,14 +649,14 @@ class Template:
 		while not inputStream.IsAtEnd ():
 			current = inputStream.Get()
 
-			if (current == '{' and inputStream.Peek() == '{'):
+			if current == '{' and inputStream.Peek() == '{':
 				inputStream.Unget()
 				token = self.__ReadToken (inputStream)
 
-				if (token.IsBlockStart ()):
+				if token.IsBlockStart () or token.IsNegatedBlockStart ():
 					nestedStack.append (token.GetName ())
 
-				if (token.IsBlockClose ()):
+				if token.IsBlockClose ():
 					if len(nestedStack) > 0:
 						if token.GetName () != nestedStack.pop ():
 							raise InvalidToken (
@@ -672,19 +680,19 @@ class Template:
 		while not inputStream.IsAtEnd ():
 			current = inputStream.Get()
 
-			if (current == '{' and inputStream.Peek() == '{'):
+			if current == '{' and inputStream.Peek() == '{':
 				inputStream.Unget()
 				token = self.__ReadToken (inputStream)
 
-				if (token.IsValue() or token.IsSelfReference ()):
+				if token.IsValue() or token.IsSelfReference ():
 					self.__ExpandVariable(outputStream, token, itemStack)
-				elif (token.IsBlockStart ()):
+				elif token.IsBlockStart () or token.IsNegatedBlockStart ():
 					blockEnd = self.__FindBlockEnd(inputStream, token.GetName ())
 					self.__ExpandBlock(inputStream, outputStream,
 									   token, blockEnd, itemStack)
-				elif (token.IsWhiteSpaceToken()):
+				elif token.IsWhiteSpaceToken():
 					outputStream.write (token.EvaluateWhiteSpaceToken(inputStream.GetPosition  ()))
-				elif (token.IsIncludeToken ()):
+				elif token.IsIncludeToken ():
 					self.__ExpandInclude (outputStream, token, itemStack)
 			else:
 				# pass through to output

@@ -37,7 +37,7 @@ This requires to pass an array of named objects::
 
     template.Render ({'users':[{'name':'Alice'}, {'name':'Bob'}]})
 
-In some cases, this is unnecessary complicated. Lina provides a special syntax to access the *current* element, using a single dot. Using a self-reference, the template above can be simplified to::
+In some cases, accessing members by names is unnecessary complicated. Lina provides a special syntax to access the *current* element, using a single dot. Using a self-reference, the template above can be simplified to::
 
     {{#users}}Hello {{.}}!{{/users}}
 
@@ -85,6 +85,12 @@ For blocks, Lina provides additional modifiers to check whether the current bloc
 ``#First`` will be only expanded for the first iteration, ``#Separator`` will be expanded for every expansion which is neither first nor last and ``#Last`` will be expanded for the last iteration only. If there is only one element, it will considered both first and last item of the sequence.
 
 Whitespace can be also part of a template. Use ``{{_NEWLINE}}`` to get a new line character inserted into the stream, and ``{{_SPACE}}`` to get a blank space.
+
+If a block variable is not found, the block will be not expanded. It is possible to capture this case using ``!`` blocks, which are only expanded if the variable is not present::
+
+    {{!users}}No users :({{/users}}
+
+Rendered with ``template.Render ()``, this will yield ``No users :(``. This can be used to emulate conditional statements.
 
 Contents:
 

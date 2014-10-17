@@ -313,6 +313,22 @@ def testInvalidBlockNestingRaisesException ():
     with pytest.raises (InvalidToken):
         template.RenderSimple()
 
+def testNegatedBlock ():
+    template = Template ('{{!foo}}Not foo{{/foo}}{{#foo}}Foo?{{/foo}}')
+    assert ('Not foo' == template.RenderSimple ())
+
+def testNegatedBlockParentAccess ():
+    template = Template ('{{#root}}{{!foo}}Not foo {{name}}{{/foo}}{{#foo}}Foo {{name}}{{/foo}}{{/root}}')
+    assert ('Not foo Test' == template.RenderSimple (root={'name' : 'Test'}))
+
+def testNegatedBlockInactiveParentAccess ():
+    template = Template ('{{#root}}{{!foo}}Not foo {{name}}{{/foo}}{{#foo}}Foo {{name}}{{/foo}}{{/root}}')
+    assert ('Foo Test' == template.RenderSimple (root={'name' : 'Test', 'foo' : None}))
+
+def testNegatedBlockInactive ():
+    template = Template ('{{!foo}}Not foo{{/foo}}{{#foo}}Foo!{{/foo}}')
+    assert ('Foo!' == template.RenderSimple (foo=None))
+
 def testMissingVariableIsReplacedWithEmptyString ():
     template = Template ('{{var}}')
     assert ('' == template.RenderSimple ())
