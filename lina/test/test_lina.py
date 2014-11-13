@@ -268,6 +268,11 @@ def testEscapeNewlineFormatter ():
     result = template.RenderSimple(item='\n')
     assert ('\\n' == result)
 
+def testEscapeStringeFormatter ():
+    template = Template ('{{item:escape-string}}')
+    result = template.RenderSimple(item='\n with "quotes" and \t')
+    assert ('\\n with \\"quotes\\" and \\t' == result)
+
 def testWrapStringFormatter ():
     template = Template ('{{item:wrap-string}}')
     result = template.RenderSimple(item='Some string')

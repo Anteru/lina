@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 import io
 import os
@@ -251,6 +251,17 @@ class EscapeNewlineFormatter(Formatter):
 	def Format(self, text):
 		return str (text).replace ('\n', '\\n')
 
+class EscapeStringFormatter(Formatter):
+	'''Escape embedded newlines, tabs and quotes.'''
+	def __init__(self):
+		Formatter.__init__(self, FormatterType.Value)
+
+	def Format(self, text):
+		text = str (text).replace ('\n', '\\n')
+		text = text.replace ('\t', '\\t')
+		text = text.replace ('\"', '\\"')
+		return text
+
 class WrapStringFormatter(Formatter):
 	'''Wrap strings with quotation marks.'''
 	def __init__(self):
@@ -309,6 +320,8 @@ def GetFormatter (name, value = None, position=None):
 		return CBooleanFormatter ()
 	elif name == 'escape-newlines':
 		return EscapeNewlineFormatter ()
+	elif name == 'escape-string':
+		return EscapeStringFormatter ()
 	elif name == 'hex':
 		return HexFormatter ()
 	else:
