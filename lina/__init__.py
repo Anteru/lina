@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 import io
 import os
@@ -17,7 +17,7 @@ class TemplateException(Exception):
 		self._position = position
 
 	def GetPosition (self):
-		'''Get the position where the exception occured.
+		'''Get the position where the exception occurred.
 
 		:returns: An object with two fields, ``line`` and ``column``.'''
 		from collections import namedtuple
@@ -540,6 +540,15 @@ class Template:
 			if blockName in items:
 				blockItems = items [blockName]
 
+				# Using name=None is an alternative way to skip a block
+				# A block specified using name=None is ignored, as if it was
+				# never defined
+				if blockItems is None:
+					if start.IsNegatedBlockStart ():
+						break
+					else:
+						return
+
 				if start.IsNegatedBlockStart ():
 					return
 				break
@@ -556,9 +565,9 @@ class Template:
 		# name=dict => name = [dict]
 		# name=None => name = [{}]
 		# otherwise, just copy
-		if (blockItems == None):
-			instanceCount = 1
+		if blockItems is None:
 			blockItems = [{}]
+			instanceCount = 1
 		elif isinstance(blockItems, collections.abc.Mapping):
 			blockItems = [blockItems]
 			instanceCount = 1
@@ -592,11 +601,11 @@ class Template:
 			isLast = ((i+1) == instanceCount)
 
 			if (i == 0):
-				current [blockName + "#First"] = None
+				current [blockName + "#First"] = {}
 			if ((i+1) < instanceCount):
-				current [blockName + "#Separator"] = None
+				current [blockName + "#Separator"] = {}
 			if ((i+1) == instanceCount):
-				current [blockName + "#Last"] = None
+				current [blockName + "#Last"] = {}
 
 			hasBlockFormatter = False
 			for formatter in [f for f in start.GetFormatters() if f.IsBlockFormatter()]:

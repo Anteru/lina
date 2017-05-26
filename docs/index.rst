@@ -86,7 +86,7 @@ For blocks, Lina provides additional modifiers to check whether the current bloc
 
 Whitespace can be also part of a template. Use ``{{_NEWLINE}}`` to get a new line character inserted into the stream, and ``{{_SPACE}}`` to get a blank space.
 
-If a block variable is not found, the block will be not expanded. It is possible to capture this case using ``!`` blocks, which are only expanded if the variable is not present::
+If a block variable is not found, or the block is ``None``, the block will be not expanded. It is possible to capture this case using ``!`` blocks, which are only expanded if the variable is not present::
 
     {{!users}}No users :({{/users}}
 

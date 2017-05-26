@@ -45,17 +45,17 @@ def testExpandSet():
 
 def testGlobalVariableGetsFound():
     template = Template ('{{#B}}{{test}}{{/B}}')
-    result=template.RenderSimple(test='value', B=None)
+    result=template.RenderSimple(test='value', B={})
     assert ('value' == result)
 
 def testParentBlockVariableGetsFound():
     template = Template ('{{#A}}{{#B}}{{test}}{{/B}}{{/A}}')
-    result=template.RenderSimple(A={'test':'value', 'B':None})
+    result=template.RenderSimple(A={'test':'value', 'B':{}})
     assert ('value' == result)
 
 def testReplaceBlockEmpty():
     template = Template('This is a {{#block}}test{{/block}}')
-    result=template.RenderSimple(block=None)
+    result=template.RenderSimple(block={})
     assert ('This is a test' == result)
 
 def testReplaceBlockTwice():
@@ -118,7 +118,7 @@ def testSeparatorIsNotAddedOnSingleItem():
     result=template.RenderSimple(block=[{'item' : '0'}])
     assert ('0' == result)
 
-def testExpandCompundItem():
+def testExpandCompoundItem():
     template = Template('{{item.key}}')
     result=template.RenderSimple(item = {'key':'value'})
     assert ('value' == result)
@@ -328,11 +328,19 @@ def testNegatedBlockParentAccess ():
 
 def testNegatedBlockInactiveParentAccess ():
     template = Template ('{{#root}}{{!foo}}Not foo {{name}}{{/foo}}{{#foo}}Foo {{name}}{{/foo}}{{/root}}')
-    assert ('Foo Test' == template.RenderSimple (root={'name' : 'Test', 'foo' : None}))
+    assert ('Not foo Test' == template.RenderSimple (root={'name' : 'Test', 'foo' : None}))
 
 def testNegatedBlockInactive ():
     template = Template ('{{!foo}}Not foo{{/foo}}{{#foo}}Foo!{{/foo}}')
-    assert ('Foo!' == template.RenderSimple (foo=None))
+    assert ('Foo!' == template.RenderSimple (foo={}))
+
+def testNegatedBlockActiveNone ():
+    template = Template ('{{!foo}}Not foo{{/foo}}{{#foo}}Foo!{{/foo}}')
+    assert ('Not foo' == template.RenderSimple (foo=None))
+
+def testNegatedBlockActiveMissing ():
+    template = Template ('{{!foo}}Not foo{{/foo}}{{#foo}}Foo!{{/foo}}')
+    assert ('Not foo' == template.RenderSimple ())
 
 def testMissingVariableIsReplacedWithEmptyString ():
     template = Template ('{{var}}')
