@@ -98,6 +98,7 @@ Contents:
    :maxdepth: 4
 
    lina
+   release-notes
 
 
 Indices and tables
