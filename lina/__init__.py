@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
 import io
 import os
@@ -166,19 +166,38 @@ class Formatter:
 		assert self.IsBlockFormatter ()
 		pass
 
+_formatters = {}
+
+class _RegisterFormatter:
+	def __init__ (self, *args):
+		self.__aliases = args
+
+	def __call__ (self, cls):
+		for alias in self.__aliases:
+			if hasattr (cls, 'Create'):
+				_formatters [alias] = cls.Create
+			else:
+				_formatters [alias] = cls
+
+@_RegisterFormatter ('indent')
 class IndentFormatter(Formatter):
 	'''Indent a block using tabs.'''
+	@classmethod
+	def Create (cls, value):
+		return cls (int (value))
+
 	def __init__(self, depth):
 		Formatter.__init__(self, FormatterType.Block)
 		self._depth = depth
 		self._tabs = '\t' * depth
 
-	def OnBlockBegin(self, isFirst):
+	def OnBlockBegin(self, _):
 		return self._tabs
 
 	def Format(self, block):
 		return block.replace ('\n', '\n' + self._tabs)
 
+@_RegisterFormatter ('list-separator', 'separator', 'l-s')
 class ListSeparatorFormatter(Formatter):
 	'''Separate block entries.
 
@@ -193,11 +212,16 @@ class ListSeparatorFormatter(Formatter):
 		if not isLast:
 			return self._value
 
+@_RegisterFormatter ('width', 'w')
 class WidthFormatter(Formatter):
 	'''Align the value to a particular width.
 
 	Negative values align to the left (i.e., the padding is added on the left:
 	``'  42'``), positive values to the right (``'42  '``).'''
+	@classmethod
+	def Create (cls, value):
+		return cls (int (value))
+
 	def __init__(self, width):
 		Formatter.__init__(self, FormatterType.Value)
 		self._width = str(width) if width >= 0 else '>' + str(-width)
@@ -205,6 +229,7 @@ class WidthFormatter(Formatter):
 	def Format(self, text):
 		return str.format ("{0:" + self._width + "}", str(text))
 
+@_RegisterFormatter ('prefix')
 class PrefixFormatter(Formatter):
 	'''Add a prefix to a value.'''
 	def __init__(self, prefix):
@@ -214,6 +239,7 @@ class PrefixFormatter(Formatter):
 	def Format(self, text):
 		return self._prefix + str (text)
 
+@_RegisterFormatter ('suffix')
 class SuffixFormatter(Formatter):
 	'''Add a suffix to a value.'''
 	def __init__(self, suffix):
@@ -223,6 +249,7 @@ class SuffixFormatter(Formatter):
 	def Format(self, text):
 		return str (text) + self._suffix
 
+@_RegisterFormatter ('default')
 class DefaultFormatter(Formatter):
 	'''Emit the default if the value is None, otherwise the value itself.'''
 	def __init__(self, value):
@@ -235,6 +262,7 @@ class DefaultFormatter(Formatter):
 		else:
 			return text
 
+@_RegisterFormatter ('upper-case', 'uc')
 class UppercaseFormatter(Formatter):
 	'''Format a value as uppercase.'''
 	def __init__(self):
@@ -243,6 +271,7 @@ class UppercaseFormatter(Formatter):
 	def Format(self, text):
 		return str (text).upper ()
 
+@_RegisterFormatter ('escape-newlines')
 class EscapeNewlineFormatter(Formatter):
 	'''Escape embedded newlines.'''
 	def __init__(self):
@@ -251,6 +280,7 @@ class EscapeNewlineFormatter(Formatter):
 	def Format(self, text):
 		return str (text).replace ('\n', '\\n')
 
+@_RegisterFormatter ('escape-string')
 class EscapeStringFormatter(Formatter):
 	'''Escape embedded newlines, tabs and quotes.'''
 	def __init__(self):
@@ -262,6 +292,7 @@ class EscapeStringFormatter(Formatter):
 		text = text.replace ('\"', '\\"')
 		return text
 
+@_RegisterFormatter ('wrap-string')
 class WrapStringFormatter(Formatter):
 	'''Wrap strings with quotation marks.'''
 	def __init__(self):
@@ -273,6 +304,7 @@ class WrapStringFormatter(Formatter):
 		else:
 			return text
 
+@_RegisterFormatter ('cbool')
 class CBooleanFormatter(Formatter):
 	'''For booleans, write true or false to the output. Otherwise,
 	the input is just passed through.'''
@@ -285,6 +317,7 @@ class CBooleanFormatter(Formatter):
 		else:
 			return value
 
+@_RegisterFormatter ('hex')
 class HexFormatter(Formatter):
 	'''Write an integer as a hex literal (0x133F).'''
 	def __init__(self):
@@ -296,37 +329,19 @@ class HexFormatter(Formatter):
 		result = '0x' + result [2:].upper ()
 		return result
 
-def GetFormatter (name, value = None, position=None):
+def _GetFormatter (name, value = None, position=None):
 	'''Get a formatter.
 
 	If the formatter cannot be found, an exception is raised.'''
-	if name == 'width' or name == 'w':
-		return WidthFormatter (int (value))
-	elif name == 'prefix':
-		return PrefixFormatter (value)
-	elif name == 'suffix':
-		return SuffixFormatter (value)
-	elif name == 'list-separator' or name == 'l-s' or name == 'separator':
-		return ListSeparatorFormatter(value)
-	elif name == 'indent':
-		return IndentFormatter(int (value))
-	elif name == 'upper-case' or name == 'uc':
-		return UppercaseFormatter ()
-	elif name == 'default':
-		return DefaultFormatter (value)
-	elif name == 'wrap-string':
-		return WrapStringFormatter ()
-	elif name == 'cbool':
-		return CBooleanFormatter ()
-	elif name == 'escape-newlines':
-		return EscapeNewlineFormatter ()
-	elif name == 'escape-string':
-		return EscapeStringFormatter ()
-	elif name == 'hex':
-		return HexFormatter ()
-	else:
+	createFunction = _formatters.get (name, None)
+	if not createFunction:
 		raise InvalidFormatter("Invalid formatter '{0}'".format (name),
 			position)
+
+	if value:
+		return createFunction (value)
+	else:
+		return createFunction ()
 
 class Token:
 	'''Represents a single token.
@@ -372,7 +387,7 @@ class Token:
 				else:
 					(key, value) = (flag, None)
 
-				self.__formatters.append (GetFormatter (key, value, position))
+				self.__formatters.append (_GetFormatter (key, value, position))
 
 	def GetName(self):
 		'''Get the name of this token.'''
@@ -423,9 +438,9 @@ class Token:
 
 		If the content is not a valid whitespace name, this function will raise
 		:py:class:`InvalidWhitespaceToken`.'''
-		if (self.__name == 'NEWLINE'):
+		if self.__name == 'NEWLINE':
 			return '\n'
-		elif (self.__name == 'SPACE'):
+		elif self.__name == 'SPACE':
 			return ' '
 		else:
 			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.__name),

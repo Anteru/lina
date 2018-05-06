@@ -1,6 +1,12 @@
 Release notes
 =============
 
+1.0.7
+-----
+
+* The formatter registration has been improved. Instead of a long ``if-elif``
+  cascade, it now jumps directly to the right formatter through a dictionary.
+
 1.0.6
 -----
 
