@@ -6,3 +6,8 @@ py/**
 .tox/**
 dist/**
 docs/_build/**
+htmlcov/**
+.eggs/**
+.coverage
+.pytest*
+.vscode*
