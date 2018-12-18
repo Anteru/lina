@@ -353,6 +353,10 @@ class Token:
 		{{#Foo}} -> name = Foo, prefix = #
 		{{Bar:width=8}} -> name = Bar, prefix = None,
 							flags = {width:8}
+
+	The constructor checks if the formatter matches the token type. A block
+	formatter can be only applied to a block token, and a value formatter only
+	to a value.
 	'''
 
 	__validPrefixes = {'#', '/', '_', '>', '!'}
@@ -381,13 +385,21 @@ class Token:
 			flags = tmp[separator+1:].split(':')
 
 			for flag in flags:
-				(key, value) = (None, None)
-				if (flag.find ('=') != -1):
+				if flag.find ('=') != -1:
 					(key, value) = flag.split('=')
 				else:
 					(key, value) = (flag, None)
 
-				self.__formatters.append (_GetFormatter (key, value, position))
+				formatter = _GetFormatter (key, value, position)
+
+				if formatter.IsBlockFormatter () and not self.IsBlockStart ():
+					raise InvalidFormatter ("Requested block formatter '{}' on non-block. Only "
+						"block formatters can be used on blocks.".format (key), position)
+				elif formatter.IsValueFormatter () and not self.IsValue ():
+					raise InvalidFormatter ("Requested value formatter '{}' for non-value. Only "
+						"value formatters can be used with values.".format (key), position)
+
+				self.__formatters.append (formatter)
 
 	def GetName(self):
 		'''Get the name of this token.'''
@@ -421,11 +433,11 @@ class Token:
 		'''Return true if this token is a block-close token.'''
 		return self.__prefix == '/'
 
-	def IsWhiteSpaceToken (self):
+	def IsWhiteSpace (self):
 		'''Return true if this token is a whitespace directive.'''
 		return self.__prefix == '_'
 
-	def IsIncludeToken (self):
+	def IsInclude (self):
 		'''Return true if this token is an include directive.'''
 		return self.__prefix == '>'
 
@@ -519,8 +531,7 @@ class Template:
 			return
 
 		for formatter in token.GetFormatters():
-			if formatter.IsValueFormatter():
-				value = formatter.Format (value)
+			value = formatter.Format (value)
 
 		if value is not None:
 			value = str (value)
@@ -622,15 +633,14 @@ class Template:
 			if ((i+1) == instanceCount):
 				current [blockName + "#Last"] = {}
 
-			hasBlockFormatter = False
-			for formatter in [f for f in start.GetFormatters() if f.IsBlockFormatter()]:
-				hasBlockFormatter = True
+			formatters = start.GetFormatters ()
+			for formatter in formatters:
 				blockFormatterPrefix = formatter.OnBlockBegin (isFirst)
 				if blockFormatterPrefix:
 					outputStream.write (blockFormatterPrefix)
 
 			context.append (current)
-			if hasBlockFormatter:
+			if formatters:
 				# Write the string to a temporary stream if a block formatter is
 				# present
 				tmpStream = io.StringIO()
@@ -639,9 +649,8 @@ class Template:
 
 				tmpString = tmpStream.getvalue()
 
-				for formatter in start.GetFormatters():
-					if formatter.IsBlockFormatter():
-						tmpString = formatter.Format (tmpString)
+				for formatter in formatters:
+					tmpString = formatter.Format (tmpString)
 				outputStream.write (tmpString)
 			else:
 				# Directly render into output stream for maximum performance
@@ -649,11 +658,10 @@ class Template:
 
 			context.pop ()
 
-			if hasBlockFormatter:
-				for formatter in [f for f  in start.GetFormatters() if f.IsBlockFormatter()]:
-					blockFormatterSuffix = formatter.OnBlockEnd (isLast)
-					if blockFormatterSuffix:
-						outputStream.write (blockFormatterSuffix)
+			for formatter in formatters:
+				blockFormatterSuffix = formatter.OnBlockEnd (isLast)
+				if blockFormatterSuffix:
+					outputStream.write (blockFormatterSuffix)
 
 	def __ReadToken(self, inputStream):
 		'''Read a single token from the stream.'''
@@ -682,7 +690,7 @@ class Template:
 		'''Find the block end for a block named blockname in a stream, starting
 		from the current position.'''
 
-		nestedStack = []
+		nestedStack = [blockname]
 		while not inputStream.IsAtEnd ():
 			current = inputStream.Get()
 
@@ -694,15 +702,13 @@ class Template:
 					nestedStack.append (token.GetName ())
 
 				if token.IsBlockClose ():
-					if len(nestedStack) > 0:
-						if token.GetName () != nestedStack.pop ():
-							raise InvalidToken (
-								"Invalid block nesting for block '{}'".format (token.GetName ()),
-								inputStream.GetPosition ())
-					elif token.GetName () == blockname:
+					if token.GetName () != nestedStack.pop ():
+						raise InvalidBlock (
+							"Invalid block nesting for block '{}'".format (token.GetName ()),
+							inputStream.GetPosition ())
+					
+					if not nestedStack:
 						return token
-					else:
-						break
 		raise InvalidBlock ("Could not find block end for '{}'".format (blockname),
 			inputStream.GetPosition  ())
 
@@ -727,10 +733,13 @@ class Template:
 					blockEnd = self.__FindBlockEnd(inputStream, token.GetName ())
 					self.__ExpandBlock(inputStream, outputStream,
 									   token, blockEnd, itemStack)
-				elif token.IsWhiteSpaceToken():
+				elif token.IsWhiteSpace():
 					outputStream.write (token.EvaluateWhiteSpaceToken(inputStream.GetPosition  ()))
-				elif token.IsIncludeToken ():
+				elif token.IsInclude ():
 					self.__ExpandInclude (outputStream, token, itemStack)
+				else:
+					raise InvalidToken ("Invalid token encountered",
+						inputStream.GetPosition ())
 			else:
 				# pass through to output
 				outputStream.write(current)

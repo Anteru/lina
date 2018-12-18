@@ -1,6 +1,12 @@
 Release notes
 =============
 
+1.0.9
+-----
+
+* Applying block formatters to non-blocks and value formatters to non-values
+  raises an error now. Previously, those were silently ignored.
+
 1.0.8
 -----
 

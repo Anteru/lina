@@ -49,7 +49,7 @@ or even simpler using :py:meth:`lina.Template.RenderSimple`::
 
     template.RenderSimple (users = ['Alice', 'Bob'])
 
-Both self-references as well as values can also access fields of an object. Assuming the ``User`` class has fields ``name``, ``age``, the follwing template will print the user name and age::
+Both self-references as well as values can also access fields of an object. Assuming the ``User`` class has fields ``name``, ``age``, the following template will print the user name and age::
 
     {{#users}}Hello {{.name}}, you are {{.age}} years old!{{/users}}
 
