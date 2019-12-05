@@ -9,7 +9,7 @@ Lina is a minimal template system for Python, modelled after Google's `CTemplate
 
 evaluated with::
 
-    formats = [{'name':'Vector3i', 'value': 0x301}, {'name':'Vector3f', 'value': 0x302}]
+    types = [{'name':'Vector3i', 'value': 0x301}, {'name':'Vector3f', 'value': 0x302}]
 
 will produce::
 
@@ -36,6 +36,9 @@ Blocks have an additional prefix before the variable, ``#`` for the block start 
 This requires to pass an array of named objects::
 
     template.Render ({'users':[{'name':'Alice'}, {'name':'Bob'}]})
+
+Element access
+--------------
 
 In some cases, accessing members by names is unnecessary complicated. Lina provides a special syntax to access the *current* element, using a single dot. Using a self-reference, the template above can be simplified to::
 
@@ -78,13 +81,14 @@ will produce::
     X: 0, Y: 1, Z: 2
     X: 3, Y: 4, Z: 5
 
+Blocks
+------
+
 For blocks, Lina provides additional modifiers to check whether the current block execution is the first, an intermediate or the last one::
 
     {{#block}}{{variable}}{{#block#Separator}},{{/block#Separator}}{{/block}}
 
 ``#First`` will be only expanded for the first iteration, ``#Separator`` will be expanded for every expansion which is neither first nor last and ``#Last`` will be expanded for the last iteration only. If there is only one element, it will considered both first and last item of the sequence.
-
-Whitespace can be also part of a template. Use ``{{NEWLINE}}`` to get a new line character inserted into the stream, and ``{{SPACE}}`` to get a blank space.
 
 If a block variable is not found, or the block is ``None``, the block will be not expanded. It is possible to capture this case using ``!`` blocks, which are only expanded if the variable is not present::
 
@@ -92,7 +96,34 @@ If a block variable is not found, or the block is ``None``, the block will be no
 
 Rendered with ``template.Render ()``, this will yield ``No users :(``. This can be used to emulate conditional statements.
 
-Contents:
+Formatters
+----------
+
+Lina comes with a few formatters which can be used to modify values or block elements. The value formatters are:
+
+* ``width``, ``w``: This aligns a value to a specific width. Negative values align to the left. For example: ``{{name:w=-8}}`` using ``name='Ton'`` will yield ``     Ton``.
+* ``prefix`` adds a prefix to a value. For example: ``{{method:prefix=api_}}`` with ``method='Copy'`` yields ``api_Copy``
+* ``suffix`` adds a suffix to a value. For example: ``{{method:suffix=_internal}}`` with ``method='Copy'`` yields ``Copy_internal``
+* ``default`` provides a default value in case the provided value is ``None``. ``{{name:default=Unknown}}`` with ``name=None`` yields ``Unknown``.
+* ``upper-case``, ``uc`` converts the provided value to upper case. ``{{func:upper-case}}`` with ``func=Copy`` yields ``COPY``.
+* ``escape-newlines`` escapes embedded newlines. ``{{s:escape-newlines}}`` with ``s='foo\nbar'`` yields ``foo\\nbar``.
+* ``escape-string`` escapes newlines, tabs, and quotes. ``{{s:escape-string}}`` with ``s=a "string"`` yields ``a \"string\"``.
+* ``wrap-string`` wraps the provided string with quotes. ``{{s:wrap-string}}`` with ``s=string`` yields ``"string"``. If the value is not a string, it will not be wrapped.
+* ``cbool`` converts booleans to ``true`` or ``false``. ``{{enabled:cbool}}`` with ``enabled=True`` yields ``true``. If the value is not a boolean, it will be returned as-is.
+* ``hex`` prints numbers in hexadecimal notation. ``{{i:hex}}`` with ``i=127`` yields ``0x7F``.
+
+Lina provides the following block formatters:
+
+* ``indent`` indents every line with a specified number of tabs. ``{{#block:indent=2}}{{.}}{{/block}}`` with ``block=[1,2]`` yields ``\t\t1\t\t2``
+* ``list-separator``, ``l-s`` separates block repetitions using the provided value. ``{{#block:l-s=,}}{{.}}{{/block}}`` with ``block=[1,2]`` yields ``1,2``.
+
+Whitespace
+^^^^^^^^^^ 
+
+Whitespace in Lina is preserved. If you want to explicitly insert whitespace, you can use ``{{NEWLINE}}`` to get a new line character inserted into the stream, and ``{{SPACE}}`` to get a blank space. This is mostly useful for formatters, for instance: ``{{#block:line-separator=NEWLINE}}{{.}}{{/block}}`` rendered with ``block=[1,2]`` yields ``1\n2``.
+
+Contents
+========
 
 .. toctree::
    :maxdepth: 4
