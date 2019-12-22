@@ -15,14 +15,30 @@ class TemplateException(Exception):
 	def __init__(self, message, position):
 		Exception.__init__(self, message)
 		self._position = position
+		self.message = message
+
+	def __str__(self):
+		pos = self.GetPosition()
+		result = []
+		if pos.filename:
+			result.append (pos.filename)
+			result.append(':')
+		result.append(str(pos.line))
+		result.append(':')
+		result.append(str(pos.column))
+		result.append(':')
+
+		result.append(self.message)
+
+		return ''.join(result)
 
 	def GetPosition (self):
 		'''Get the position where the exception occurred.
 
 		:returns: An object with two fields, ``line`` and ``column``.'''
 		from collections import namedtuple
-		p = namedtuple ('position', ['line', 'column'])
-		return p (self._position [0], self._position [1])
+		p = namedtuple ('position', ['line', 'column', 'filename'])
+		return p (self._position [0], self._position [1], self._position [2])
 
 class InvalidFormatter(TemplateException):
 	'''An invalid formatter was encountered.
@@ -47,9 +63,10 @@ class TextStream:
 
 	The text stream is used for input only and keeps track of the current read
 	pointer position in terms of line/column numbers.'''
-	def __init__(self, text):
+	def __init__(self, text, *, filename=None):
 		self._text = text
 		self._length = len (text)
+		self._filename = filename
 		self.Reset ()
 
 	def Reset(self):
@@ -91,7 +108,7 @@ class TextStream:
 		'''Get the current read position as a pair (line, column).'''
 		assert self._line >= 1
 		assert self._column >= 1
-		return (self._line, self._column)
+		return self._line, self._column, self._filename
 
 	def Skip(self, length):
 		'''Skip a number of characters starting from the current position.'''
@@ -469,11 +486,11 @@ class IncludeHandler:
 class Template:
 	'''The main template class.'''
 
-	def __init__(self, template, includeHandler=None):
+	def __init__(self, template, includeHandler=None, *, filename=None):
 		'''includeHandler is used to support nested templates. It must support
 		a single function, Get(templateName) which returns a new Template
 		instance. See also TemplateRepository().'''
-		self.__input = TextStream (template)
+		self.__input = TextStream (template, filename=filename)
 		self.__includeHandler = includeHandler
 		self.__log = logging.getLogger('Lina.Template')
 
@@ -702,15 +719,16 @@ class Template:
 					nestedStack.append (token.GetName ())
 
 				if token.IsBlockClose ():
-					if token.GetName () != nestedStack.pop ():
+					lastBlock = nestedStack.pop ()
+					if token.GetName () != lastBlock:
 						raise InvalidBlock (
-							"Invalid block nesting for block '{}'".format (token.GetName ()),
+							"Cannot close block '{}' here. Last open block is '{}'".format (token.GetName (), lastBlock),
 							inputStream.GetPosition ())
 					
 					if not nestedStack:
 						return token
 		raise InvalidBlock ("Could not find block end for '{}'".format (blockname),
-			inputStream.GetPosition  ())
+			inputStream.GetPosition ())
 
 	def __ExpandInclude (self, outputStream, token, itemStack):
 		'''Expand an include directive.'''
@@ -773,4 +791,4 @@ class TemplateRepository (IncludeHandler):
 
 	def Get(self, name):
 		content = open(os.path.join(self.dir, name + self.suffix)).read ()
-		return Template (content, self)
+		return Template (content, self, filename=name)
