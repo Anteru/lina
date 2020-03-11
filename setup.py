@@ -11,7 +11,7 @@ setup(
     python_requires='>=3.6',
 
     setup_requires=['pytest-runner'],
-    test_requires=['pytest'],
+    tests_require=['pytest'],
 
     author="Matthäus G. Chajdas",
     author_email="dev@anteru.net",
