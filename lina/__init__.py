@@ -2,7 +2,7 @@
 # @author: Matthäus G. Chajdas
 # @license: 2-clause BSD
 
-__version__ = '1.0.8'
+__version__ = '1.0.10'
 
 import io
 import os
@@ -51,7 +51,11 @@ class InvalidToken(TemplateException):
 	pass
 
 class InvalidWhitespaceToken(TemplateException):
-	'''An invalid whitespace token was encountered.'''
+	'''Only for backwards compatibility. Will be removed in 2.x.'''
+	pass
+
+class InvalidNamedCharacterToken(InvalidWhitespaceToken):
+	'''An invalid named character token was encountered.'''
 	pass
 
 class InvalidBlock(TemplateException):
@@ -377,6 +381,12 @@ class Token:
 	'''
 
 	__validPrefixes = {'#', '/', '_', '>', '!'}
+	__namedCharacterTokens = {
+		'LEFT_BRACE': '{',
+		'RIGHT_BRACE': '}',
+		'NEWLINE': '\n',
+		'SPACE': ' '
+	}
 
 	def __init__(self, name, start, end, position):
 		for prefix in self.__validPrefixes:
@@ -450,8 +460,8 @@ class Token:
 		'''Return true if this token is a block-close token.'''
 		return self.__prefix == '/'
 
-	def IsWhiteSpace (self):
-		'''Return true if this token is a whitespace directive.'''
+	def IsNamedCharacter (self):
+		'''Return true if this token is a named character token.'''
 		return self.__prefix == '_'
 
 	def IsInclude (self):
@@ -462,17 +472,16 @@ class Token:
 		'''Return true if this token is a self-reference.'''
 		return self.__name[0] == '.'
 
-	def EvaluateWhiteSpaceToken (self, position):
-		'''Get the content of this token if this token is a whitespace token.
+	def EvaluateNamedCharacterToken (self, position):
+		'''Get the content of this token if this token is an escape character token.
 
-		If the content is not a valid whitespace name, this function will raise
-		:py:class:`InvalidWhitespaceToken`.'''
-		if self.__name == 'NEWLINE':
-			return '\n'
-		elif self.__name == 'SPACE':
-			return ' '
+		If the content is not a valid character name, this function will raise
+		:py:class:`InvalidSpecialCharacterToken`.'''
+		result = self.__namedCharacterTokens.get(self.__name)
+		if result:
+			return result
 		else:
-			raise InvalidWhitespaceToken ("Unrecognized white-space token '{}'".format (self.__name),
+			raise InvalidNamedCharacterToken ("Unrecognized named character token '{}'".format (self.__name),
 				position)
 
 	def IsValue (self):
@@ -751,8 +760,8 @@ class Template:
 					blockEnd = self.__FindBlockEnd(inputStream, token.GetName ())
 					self.__ExpandBlock(inputStream, outputStream,
 									   token, blockEnd, itemStack)
-				elif token.IsWhiteSpace():
-					outputStream.write (token.EvaluateWhiteSpaceToken(inputStream.GetPosition  ()))
+				elif token.IsNamedCharacter():
+					outputStream.write (token.EvaluateNamedCharacterToken(inputStream.GetPosition  ()))
 				elif token.IsInclude ():
 					self.__ExpandInclude (outputStream, token, itemStack)
 				else:

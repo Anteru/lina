@@ -115,12 +115,12 @@ Lina comes with a few formatters which can be used to modify values or block ele
 Lina provides the following block formatters:
 
 * ``indent`` indents every line with a specified number of tabs. ``{{#block:indent=2}}{{.}}{{/block}}`` with ``block=[1,2]`` yields ``\t\t1\t\t2``
-* ``list-separator``, ``l-s`` separates block repetitions using the provided value. ``{{#block:l-s=,}}{{.}}{{/block}}`` with ``block=[1,2]`` yields ``1,2``.
+* ``list-separator``, ``l-s`` separates block repetitions using the provided value. ``{{#block:l-s=,}}{{.}}{{/block}}`` with ``block=[1,2]`` yields ``1,2``. ``NEWLINE`` is replaced with a new line, and ``SPACE`` with a space.
 
-Whitespace
-^^^^^^^^^^ 
+Whitespace & special characters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Whitespace in Lina is preserved. If you want to explicitly insert whitespace, you can use ``{{NEWLINE}}`` to get a new line character inserted into the stream, and ``{{SPACE}}`` to get a blank space. This is mostly useful for formatters, for instance: ``{{#block:line-separator=NEWLINE}}{{.}}{{/block}}`` rendered with ``block=[1,2]`` yields ``1\n2``.
+Whitespace in Lina is preserved. If you want to explicitly insert whitespace, you can use ``{{_NEWLINE}}`` to get a new line character inserted into the stream, and ``{{_SPACE}}`` to get a blank space. To produce a left brace or right brace, use ``{{_LEFT_BRACE}}`` and ``{{_RIGHT_BRACE}}``.
 
 Contents
 ========

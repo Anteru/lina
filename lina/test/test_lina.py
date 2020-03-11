@@ -371,3 +371,7 @@ def testIncludeText ():
 	repo = MemoryTemplateRepository ()
 	template = Template ('{{>text}}', repo)
 	assert ('text' == template.RenderSimple())
+
+def testLeftRightBraceTokens ():
+	template = Template ('{{_LEFT_BRACE}}{}{{_RIGHT_BRACE}}')
+	assert '{{}}' == template.RenderSimple()

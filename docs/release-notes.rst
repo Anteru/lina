@@ -1,6 +1,11 @@
 Release notes
 =============
 
+1.0.10
+------
+
+* Added ``{{_LEFT_BRACE}}`` and ``{{_RIGHT_BRACE}}`` tokens.
+
 1.0.9
 -----
 
