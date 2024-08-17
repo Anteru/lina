@@ -1,6 +1,11 @@
 Release notes
 =============
 
+1.0.11
+------
+
+* Packaging changes only.
+
 1.0.10
 ------
 

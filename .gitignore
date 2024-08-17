@@ -1,0 +1,10 @@
+*.egg
+*.egg-info
+*.pyc
+.tox/*
+dist/*
+docs/_build/*
+htmlcov/*
+.coverage
+.pytest*
+.vscode*
