@@ -8,4 +8,5 @@ htmlcov/*
 .coverage
 .pytest*
 .vscode*
-.venv
+.venv/
+dist/

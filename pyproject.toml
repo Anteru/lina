@@ -1,0 +1,69 @@
+[project]
+name = "Lina"
+dynamic = ["version"]
+
+authors = [
+    {name = "Matthäus G. Chajdas", email = "dev@anteru.net" }
+]
+
+description = "Text template library"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {text = "BSD 2-clause license"}
+
+keywords = ["SJSON"]
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Pre-processors",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+requires-python = ">= 3.6"
+
+[project.urls]
+Homepage = "http://sh13.net/projects/Lina"
+"Issue Tracker" = "https://github.com/anteru/lina/issues"
+Repository = "https://github.com/anteru/lina"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.tox]
+legacy_tox_ini = """[tox]
+envlist=py{36,37,38,39,310,311,312}
+skip_missing_interpreters=True
+
+[testenv]
+deps=
+	pytest
+commands=
+	py.test lina
+
+[testenv:cov]
+deps=
+	pytest
+	pytest-cov
+	coverage
+commands=
+	py.test --cov=lina lina
+	coverage html
+"""
+
+[tool.hatch.version]
+path = "lina/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+exclude = ["test"]
